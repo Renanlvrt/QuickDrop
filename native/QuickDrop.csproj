@@ -7,6 +7,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>QuickDrop</AssemblyName>
     <ApplicationIcon>Assets\QuickDrop.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
   </PropertyGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

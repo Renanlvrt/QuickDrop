@@ -10,6 +10,7 @@ internal static class ScreenshotTool
         var thread = new Thread(() => {
             try
             {
+                Application.SetHighDpiMode(HighDpiMode.SystemAware);
                 Application.EnableVisualStyles();
                 using var form = new MainForm(screenshotMode: true) { StartPosition = FormStartPosition.Manual, Location = new Point(-10000, -10000), ShowInTaskbar = false };
                 form.Show();
