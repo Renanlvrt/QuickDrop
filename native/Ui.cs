@@ -10,6 +10,7 @@ internal static class Ui
     internal static readonly Color Sage = Color.FromArgb(181, 201, 185);
     internal static readonly Color Ultra = Color.FromArgb(153, 168, 212);
     internal static readonly Color White = Color.White;
+    internal static readonly Color Muted = Color.FromArgb(116, 116, 118);
 
     internal static GraphicsPath Rounded(RectangleF rectangle, float radius)
     {
@@ -31,6 +32,7 @@ internal sealed class TileButton : Control
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] internal string Subtitle { get; set; } = "";
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] internal string IconName { get; set; } = "";
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] internal bool Compact { get; set; }
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)] internal bool Centered { get; set; }
     private bool hovering;
 
     public TileButton()
@@ -59,20 +61,30 @@ internal sealed class TileButton : Control
         Color fill = hovering ? ControlPaint.Light(Fill, .08f) : Fill;
         using var brush = new SolidBrush(fill);
         g.FillPath(brush, shape);
-        if (Fill == Ui.White) { using var pen = new Pen(Color.FromArgb(225, 229, 234), 1); g.DrawPath(pen, shape); }
-        int textX = IconName.Length > 0 ? 59 : 18;
-        if (IconName.Length > 0) DrawIcon(g, IconName, new Rectangle(19, Height / 2 - 12, 24, 24));
-        using var font = new Font("Segoe UI", Compact ? 10.5f : 11.5f, FontStyle.Bold);
+        int textX = IconName.Length > 0 ? (Centered ? 0 : Compact ? 47 : 60) : (Centered ? 0 : Compact ? 14 : 20);
+        using var font = new Font("Segoe UI Variable Text", Compact ? 10.5f : 11f, FontStyle.Bold);
         using var ink = new SolidBrush(Foreground);
         int titleY = Subtitle.Length > 0 ? 11 : (Height - font.Height) / 2;
-        g.DrawString(Text, font, ink, new RectangleF(textX, titleY, Width - textX - 12, font.Height + 4));
+        if (Centered && IconName.Length > 0)
+        {
+            var textSize = g.MeasureString(Text, font);
+            int groupWidth = 20 + 8 + (int)Math.Ceiling(textSize.Width);
+            int iconX = Math.Max(5, (Width - groupWidth) / 2);
+            DrawIcon(g, IconName, new Rectangle(iconX, (Height - 20) / 2, 20, 20));
+            textX = iconX + 28;
+        }
+        else if (IconName.Length > 0) DrawIcon(g, IconName, new Rectangle(Compact ? 14 : 20, Height / 2 - 12, 24, 24));
+        var textArea = new RectangleF(textX, titleY, Width - textX - (Centered ? 0 : 12), font.Height + 4);
+        if (Centered && IconName.Length == 0) textArea = new RectangleF(0, titleY, Width, font.Height + 4);
+        using var format = new StringFormat { Alignment = Centered && IconName.Length == 0 ? StringAlignment.Center : StringAlignment.Near };
+        g.DrawString(Text, font, ink, textArea, format);
         if (Subtitle.Length > 0)
         {
             using var secondaryFont = new Font("Segoe UI", 8.5f);
-            using var secondaryInk = new SolidBrush(Color.FromArgb(210, Foreground));
+            using var secondaryInk = new SolidBrush(Ui.Muted);
             g.DrawString(Subtitle, secondaryFont, secondaryInk, new RectangleF(textX, titleY + 25, Width - textX - 12, Height - titleY - 28));
         }
-        if (Focused) ControlPaint.DrawFocusRectangle(g, Rectangle.Inflate(Rectangle.Round(rectangle), -5, -5));
+        if (Focused) { using var focus = new Pen(Ui.Ink, 2) { DashStyle = DashStyle.Dot }; g.DrawPath(focus, shape); }
     }
 
     private void DrawIcon(Graphics g, string icon, Rectangle area)
@@ -94,6 +106,12 @@ internal sealed class TileButton : Control
             g.DrawLine(pen, area.X + 7, area.Y + 9, area.X + 12, area.Y + 4);
             g.DrawLine(pen, area.X + 17, area.Y + 9, area.X + 12, area.Y + 4);
             g.DrawLine(pen, area.X + 4, area.Y + 19, area.X + 20, area.Y + 19);
+        }
+        else if (icon == "back")
+        {
+            g.DrawLine(pen, area.X + 18, area.Y + 12, area.X + 5, area.Y + 12);
+            g.DrawLine(pen, area.X + 5, area.Y + 12, area.X + 11, area.Y + 6);
+            g.DrawLine(pen, area.X + 5, area.Y + 12, area.X + 11, area.Y + 18);
         }
         else if (icon == "download")
         {
@@ -126,5 +144,34 @@ internal sealed class DropTarget : Control
         g.DrawPath(border, shape);
         using var font = new Font("Segoe UI", 9.5f);
         TextRenderer.DrawText(g, "Drag files here, or choose them from your laptop.", font, Rectangle.Round(rectangle), Ui.Ink, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak);
+    }
+}
+
+internal sealed class QrCard : Control
+{
+    private readonly Bitmap qr;
+
+    public QrCard(Bitmap qr)
+    {
+        this.qr = qr;
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint | ControlStyles.OptimizedDoubleBuffer, true);
+        Size = new Size(256, 256);
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) qr.Dispose();
+        base.Dispose(disposing);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using var shape = Ui.Rounded(new RectangleF(0, 0, Width - 1, Height - 1), 12);
+        using var background = new SolidBrush(Ui.White);
+        g.FillPath(background, shape);
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        g.DrawImage(qr, new Rectangle(8, 8, Width - 16, Height - 16));
     }
 }

@@ -1,11 +1,13 @@
 # QuickDrop
 
+<img src="images/icon.png" alt="QuickDrop logo" width="72" />
+
 A small Windows tray app for moving photos, videos and documents between a laptop and an iPhone on the same Wi-Fi. The iPhone needs only Camera and Safari. QuickDrop has no Electron, Node.js, account, cloud transfer, or .NET installation requirement for users.
 
 ## Install once
 
-1. [Download QuickDrop-Setup.exe](https://github.com/Renanlvrt/QuickDrop/releases/latest/download/QuickDrop-Setup.exe) and run it. The installer puts QuickDrop in your user account and opens it. It does not need administrator rights.
-2. In QuickDrop, check **Start with Windows** if you want the hotkey always available.
+1. [Download QuickDrop-Setup.exe](https://github.com/Renanlvrt/QuickDrop/releases/latest/download/QuickDrop-Setup.exe) and run it. The installer puts QuickDrop in your user account. It does not need administrator rights.
+2. Open **QuickDrop** from the Windows Start menu. Right-click its tray icon and select **Start with Windows** if you want the hotkey always available.
 3. Press **Ctrl+Alt+Q** or double-click the tray icon. Choose **Send from iPhone** or **Send from laptop** and scan the QR with the iPhone Camera.
 
 ![QuickDrop's two-choice window](images/home.png)
@@ -23,7 +25,7 @@ The app remains in the tray when its window closes. Right-click the tray icon an
 - Only the chosen destination accepts uploads. Names are sanitized, existing files are never overwritten, and one session accepts at most 10 GB of uploaded data. Laptop downloads can read only files explicitly selected for that session.
 - Transfers use HTTP on the local network. Use trusted Wi-Fi; this is **not end-to-end encrypted** and cannot protect a QR link from someone who sees or copies it. A QR scan cannot be distinguished from opening a copied link. No local network tool can promise zero risk from malicious devices.
 - The first run may trigger a Windows Firewall prompt. Allow QuickDrop only on a **private** network you trust, never on public networks.
-- The Windows installer is currently unsigned, so Windows may identify its publisher as unknown. Do not run a copy from an untrusted source. The source and release build are public in this repository.
+- The Windows installer and app are currently unsigned, so Windows or antivirus software may check a new release before allowing it to open. Wait for a clear result from your antivirus; do not bypass a block. Do not run a copy from an untrusted source. The source and release build are public in this repository.
 
 ## Test on another machine
 

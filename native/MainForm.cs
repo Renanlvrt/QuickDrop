@@ -19,24 +19,31 @@ internal sealed class MainForm : Form
     private bool exitRequested;
     private Label status = new();
     private string[] selectedFiles = [];
+    private readonly bool screenshotMode;
 
     [DllImport("user32.dll", SetLastError = true)] private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint key);
     [DllImport("user32.dll")] private static extern bool UnregisterHotKey(IntPtr window, int id);
 
-    public MainForm()
+    public MainForm(bool screenshotMode = false)
     {
+        this.screenshotMode = screenshotMode;
         Text = "QuickDrop";
-        Width = 470; Height = 590; MinimumSize = new Size(440, 520);
+        Width = 480; Height = 580; MinimumSize = new Size(420, 480);
         StartPosition = FormStartPosition.CenterScreen;
         BackColor = Ui.Paper;
         Font = new Font("Segoe UI", 10);
+        using (var stream = typeof(MainForm).Assembly.GetManifestResourceStream("QuickDrop.Assets.QuickDrop.ico"))
+            if (stream is not null) Icon = new Icon(stream);
         AllowDrop = true;
         Controls.Add(content);
         try { previousFolder = JsonSerializer.Deserialize<LocalSettings>(File.ReadAllText(settingsFile))?.PreviousFolder; } catch { }
         var menu = new ContextMenuStrip();
         menu.Items.Add("Open QuickDrop", null, (_, _) => ShowPopup());
+        var startupMenu = new ToolStripMenuItem("Start with Windows") { Checked = StartsWithWindows(), CheckOnClick = true };
+        startupMenu.CheckedChanged += (_, _) => SetStartup(startupMenu.Checked);
+        menu.Items.Add(startupMenu);
         menu.Items.Add("Exit", null, (_, _) => { exitRequested = true; Close(); });
-        tray = new NotifyIcon { Icon = SystemIcons.Application, Text = "QuickDrop", ContextMenuStrip = menu, Visible = true };
+        tray = new NotifyIcon { Icon = Icon, Text = "QuickDrop", ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => ShowPopup();
         AttachDrop(this);
         AttachDrop(content);
@@ -46,7 +53,7 @@ internal sealed class MainForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        if (!RegisterHotKey(Handle, HotkeyId, HotkeyMods, HotkeyKey)) SetStatus("Ctrl+Alt+Q is in use. Open QuickDrop from the tray instead.");
+        if (!screenshotMode && !RegisterHotKey(Handle, HotkeyId, HotkeyMods, HotkeyKey)) SetStatus("Ctrl+Alt+Q is in use. Open QuickDrop from the tray instead.");
     }
 
     protected override void OnShown(EventArgs e)
@@ -74,55 +81,60 @@ internal sealed class MainForm : Form
     private void ShowPopup() { if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal; Show(); Activate(); }
     private string DefaultFolder => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "QuickDrop", "sentFiles");
 
-    private void Clear(string heading, bool back = false)
+    private void Clear(bool back = false)
     {
         foreach (Control old in content.Controls.Cast<Control>().ToArray())
         {
-            if (old is PictureBox picture) picture.Image?.Dispose();
             old.Dispose();
         }
         content.Controls.Clear();
-        if (back) AddButton("←  Back", ShowHome, Ui.White, compact: true, height: 38, width: 95, margin: new Padding(0, 0, 0, 18));
-        content.Controls.Add(new Label { Text = heading, Font = new Font("Segoe UI", 22, FontStyle.Bold), ForeColor = Ui.Ink, AutoSize = true, Margin = new Padding(0, 0, 0, 12) });
+        var header = new Panel { Width = 390, Height = 38, Margin = new Padding(0, 0, 0, 20) };
+        if (back)
+        {
+            var backButton = new TileButton { Text = "", AccessibleName = "Back", IconName = "back", Fill = Ui.White, Compact = true, Width = 38, Height = 38, Location = new Point(0, 0) };
+            backButton.Click += (_, _) => ShowHome();
+            header.Controls.Add(backButton);
+        }
+        header.Controls.Add(new Label { Text = "File transfer", Font = new Font("Segoe UI Variable Text", 18, FontStyle.Bold), ForeColor = Ui.Ink, AutoSize = true, Location = new Point(back ? 50 : 0, 3) });
+        content.Controls.Add(header);
         status = new Label { AutoSize = true, MaximumSize = new Size(380, 0), ForeColor = Color.FromArgb(130, 55, 60), Margin = new Padding(0, 15, 0, 0), Font = new Font("Segoe UI", 9) };
     }
 
-    private TileButton AddButton(string label, Action action, Color fill, string subtitle = "", string icon = "", bool compact = false, int height = 76, int width = 385, Padding? margin = null)
+    private TileButton AddButton(string label, Action action, Color fill, string subtitle = "", string icon = "", bool compact = false, bool centered = false, int height = 64, Color? foreground = null, Padding? margin = null)
     {
-        var button = new TileButton { Text = label, Width = width, Height = height, Fill = fill, Subtitle = subtitle, IconName = icon, Compact = compact, Margin = margin ?? new Padding(0, 0, 0, 12) };
+        var button = new TileButton { Text = label, Width = 385, Height = height, Fill = fill, Foreground = foreground ?? Ui.Ink, Subtitle = subtitle, IconName = icon, Compact = compact, Centered = centered, Margin = margin ?? new Padding(0, 0, 0, 12) };
         button.Click += (_, _) => action();
         content.Controls.Add(button);
         return button;
     }
 
-    private void AddCopy(string text, int bottom = 20)
-        => content.Controls.Add(new Label { Text = text, Font = new Font("Segoe UI", 10), ForeColor = Ui.Ink, AutoSize = true, MaximumSize = new Size(380, 0), Margin = new Padding(0, 0, 0, bottom) });
+    private void AddCopy(string text, int bottom = 20, bool muted = false, bool bold = false)
+        => content.Controls.Add(new Label { Text = text, Font = new Font("Segoe UI Variable Text", 10.5f, bold ? FontStyle.Bold : FontStyle.Regular), ForeColor = muted ? Ui.Muted : Ui.Ink, AutoSize = true, MaximumSize = new Size(380, 0), Margin = new Padding(0, 0, 0, bottom) });
+
+    private void AddCenteredCopy(string text, int bottom = 4, bool muted = false, bool bold = false)
+        => content.Controls.Add(new Label { Text = text, Font = new Font("Segoe UI Variable Text", muted ? 9 : 10.5f, bold ? FontStyle.Bold : FontStyle.Regular), ForeColor = muted ? Ui.Muted : Ui.Ink, Width = 385, Height = muted ? 32 : 26, TextAlign = ContentAlignment.MiddleCenter, Margin = new Padding(0, 0, 0, bottom) });
 
     private void SetStatus(string text) { if (IsDisposed) return; status.Text = text; }
 
     private void ShowHome()
     {
-        Clear("QuickDrop");
-        AddCopy("Move files between your laptop and iPhone. Choose a direction to get started.", 20);
-        AddButton("Send from iPhone", ShowReceiveChoices, Ui.Sage, "Scan a QR code and upload files", "phone");
-        AddButton("Send from laptop", ShowSendChoices, Ui.Ultra, "Choose files, then scan to download", "laptop");
-        var startup = new CheckBox { Text = "Start with Windows", AutoSize = true, Checked = StartsWithWindows(), Margin = new Padding(2, 14, 0, 0), ForeColor = Ui.Ink };
-        startup.CheckedChanged += (_, _) => SetStartup(startup.Checked);
-        content.Controls.Add(startup);
-        AddCopy("Ctrl+Alt+Q opens QuickDrop · Same Wi-Fi required", 0);
+        Clear();
+        AddCopy("Move files between this laptop and your iPhone on the same Wi-Fi network.", 24, muted: true);
+        AddButton("Send from iPhone", ShowReceiveChoices, Ui.Sage, icon: "phone");
+        AddButton("Send from laptop", ShowSendChoices, Ui.Ultra, icon: "laptop");
         content.Controls.Add(status);
     }
 
     private void ShowReceiveChoices()
     {
-        Clear("Send from iPhone", back: true);
-        AddCopy("Where should the files go?", 14);
-        AddButton("Default place", () => _ = ReceiveAsync(DefaultFolder), Ui.Sage, DefaultFolder, "download");
-        if (previousFolder is not null) AddButton("Previous place", () => _ = ReceiveAsync(previousFolder), Ui.White, previousFolder, "download");
-        AddButton("New place", () => {
+        Clear(back: true);
+        AddCopy("Choose where iPhone photos, videos and documents save on this laptop.", 16);
+        AddButton("Default place", () => _ = ReceiveAsync(DefaultFolder), Ui.Sage, DefaultFolder, compact: true, height: 62);
+        if (previousFolder is not null) AddButton("Previous sent place", () => _ = ReceiveAsync(previousFolder), Ui.White, previousFolder, compact: true, height: 62);
+        AddButton("New place…", () => {
             using var picker = new FolderBrowserDialog { Description = "Choose where iPhone files save", UseDescriptionForTitle = true, SelectedPath = previousFolder ?? DefaultFolder };
             if (picker.ShowDialog(this) == DialogResult.OK) _ = ReceiveAsync(picker.SelectedPath);
-        }, Ui.White, "Choose a folder on this laptop", "download");
+        }, Ui.White, compact: true, height: 50);
         content.Controls.Add(status);
     }
 
@@ -134,19 +146,20 @@ internal sealed class MainForm : Form
 
     private void ShowSendSelection()
     {
-        Clear("Send from laptop", back: true);
-        AddCopy("Choose files to send to your iPhone.", 16);
-        var dropArea = new DropTarget { Width = 385, Height = 112, Margin = new Padding(0, 0, 0, 16) };
+        Clear(back: true);
+        var dropArea = new DropTarget { Width = 385, Height = 66, Margin = new Padding(0, 0, 0, 16) };
         AttachDrop(dropArea);
         content.Controls.Add(dropArea);
         AddButton("Choose files", () => {
             using var picker = new OpenFileDialog { Multiselect = true, Title = "Choose files to send" };
             if (picker.ShowDialog(this) == DialogResult.OK) SelectFiles(picker.FileNames);
-        }, Ui.White, "Pick photos, videos, or documents", "upload", compact: true, height: 64);
+        }, Ui.White, icon: "upload", compact: true, centered: true, height: 50);
         if (selectedFiles.Length > 0)
         {
-            AddCopy(selectedFiles.Length == 1 ? Path.GetFileName(selectedFiles[0]) : $"{selectedFiles.Length} files selected", 8);
-            AddButton("Create QR code", () => _ = SendAsync(selectedFiles), Ui.Ultra, "Scan it to download on your iPhone", "phone", compact: true, height: 66);
+            var names = string.Join("\n", selectedFiles.Select(Path.GetFileName));
+            var list = new Label { Text = names, Width = 385, Height = Math.Min(160, 24 + selectedFiles.Length * 22), Padding = new Padding(12), BackColor = Ui.White, ForeColor = Ui.Ink, Font = new Font("Segoe UI Variable Text", 10), Margin = new Padding(0, 4, 0, 16), AutoEllipsis = true };
+            content.Controls.Add(list);
+            AddButton("Create QR code", () => _ = SendAsync(selectedFiles), Ui.Ink, icon: "download", compact: true, centered: true, height: 50, foreground: Ui.White);
         }
         content.Controls.Add(status);
     }
@@ -184,7 +197,7 @@ internal sealed class MainForm : Form
                 File.WriteAllText(settingsFile, JsonSerializer.Serialize(new LocalSettings(folder)));
             }
             catch { /* transfer still works; only remembering the folder failed */ }
-            ShowQr(next.Url, $"Saving to {folder}");
+            ShowQr(next.Url, $"Saving to {folder}", receiving: true);
         }
         catch (Exception error) { SetStatus(error.Message); }
     }
@@ -198,22 +211,23 @@ internal sealed class MainForm : Form
             var next = await TransferServer.StartAsync(null, paths);
             if (transfer is not null) await transfer.DisposeAsync();
             transfer = next;
-            ShowQr(next.Url, paths.Length == 1 ? "Scanning starts the download." : "Scanning downloads one ZIP with all selected files.");
+            ShowQr(next.Url, paths.Length == 1 ? "Opening this QR starts the download directly." : "Opening this QR starts the download directly as one ZIP file.", receiving: false);
         }
         catch (Exception error) { SetStatus(error.Message); }
     }
 
-    private void ShowQr(string url, string description)
+    private void ShowQr(string url, string description, bool receiving)
     {
-        Clear("Scan with iPhone", back: true);
-        AddCopy("Open your iPhone camera and scan this code.", 10);
+        Clear(back: true);
+        if (receiving) AddCopy(description, 16);
         using var data = QRCodeGenerator.GenerateQrCode(url, QRCodeGenerator.ECCLevel.Q);
         using var code = new PngByteQRCode(data);
         using var stream = new MemoryStream(code.GetGraphic(7));
         using var decoded = new Bitmap(stream);
-        content.Controls.Add(new PictureBox { Image = new Bitmap(decoded), Width = 286, Height = 286, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Ui.White, Margin = new Padding(48, 0, 0, 14), Padding = new Padding(8) });
-        AddCopy(description, 6);
-        AddCopy("The link expires in 10 minutes. Keep the laptop awake.", 0);
+        content.Controls.Add(new QrCard(new Bitmap(decoded)) { Margin = new Padding(64, 4, 0, 12) });
+        AddCenteredCopy("Scan with your iPhone Camera", bold: true);
+        AddCenteredCopy("Link expires in 10 minutes. Keep the laptop awake during transfer.", bottom: 12, muted: true);
+        if (!receiving) AddCenteredCopy(description);
         content.Controls.Add(status);
     }
 

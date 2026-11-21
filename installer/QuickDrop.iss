@@ -1,7 +1,7 @@
 [Setup]
 AppId=QuickDrop.Renanlvrt
 AppName=QuickDrop
-AppVersion=0.1.2
+AppVersion=0.1.3
 AppPublisher=Renanlvrt
 DefaultDirName={localappdata}\Programs\QuickDrop
 DefaultGroupName=QuickDrop
@@ -19,6 +19,3 @@ Source: "..\release\QuickDrop.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\QuickDrop"; Filename: "{app}\QuickDrop.exe"
-
-[Run]
-Filename: "{app}\QuickDrop.exe"; Description: "Launch QuickDrop"; Flags: nowait postinstall skipifsilent

@@ -11,7 +11,7 @@ internal static class ScreenshotTool
             try
             {
                 Application.EnableVisualStyles();
-                using var form = new MainForm { StartPosition = FormStartPosition.Manual, Location = new Point(-10000, -10000), ShowInTaskbar = false };
+                using var form = new MainForm(screenshotMode: true) { StartPosition = FormStartPosition.Manual, Location = new Point(-10000, -10000), ShowInTaskbar = false };
                 form.Show();
                 Application.DoEvents();
                 Directory.CreateDirectory("images");
