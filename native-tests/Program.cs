@@ -3,6 +3,8 @@ using System.IO.Compression;
 using System.Text;
 using QuickDrop;
 
+if (args.Contains("--screenshots")) { ScreenshotTool.Capture(); return; }
+
 string folder = Path.Combine(Path.GetTempPath(), "quickdrop-test-" + Guid.NewGuid().ToString("N"));
 Directory.CreateDirectory(folder);
 using var client = new HttpClient();

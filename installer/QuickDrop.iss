@@ -1,7 +1,7 @@
 [Setup]
 AppId=QuickDrop.Renanlvrt
 AppName=QuickDrop
-AppVersion=0.1.1
+AppVersion=0.1.2
 AppPublisher=Renanlvrt
 DefaultDirName={localappdata}\Programs\QuickDrop
 DefaultGroupName=QuickDrop

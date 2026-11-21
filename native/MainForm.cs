@@ -10,7 +10,7 @@ internal sealed class MainForm : Form
 {
     private const int HotkeyId = 0x5144;
     private const uint HotkeyMods = 0x0003; // Ctrl+Alt, distinct from QuickPlan's Alt+S.
-    private const uint HotkeyKey = 0x44; // D
+    private const uint HotkeyKey = 0x51; // Q
     private readonly FlowLayoutPanel content = new() { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true, Padding = new Padding(20) };
     private readonly NotifyIcon tray;
     private readonly string settingsFile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "QuickDrop", "settings.json");
@@ -44,7 +44,7 @@ internal sealed class MainForm : Form
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
-        if (!RegisterHotKey(Handle, HotkeyId, HotkeyMods, HotkeyKey)) SetStatus("Ctrl+Alt+D is in use. Open QuickDrop from the tray instead.");
+        if (!RegisterHotKey(Handle, HotkeyId, HotkeyMods, HotkeyKey)) SetStatus("Ctrl+Alt+Q is in use. Open QuickDrop from the tray instead.");
     }
 
     protected override void OnShown(EventArgs e)
@@ -98,7 +98,7 @@ internal sealed class MainForm : Form
     private void ShowHome()
     {
         Clear("QuickDrop");
-        content.Controls.Add(new Label { Text = "Send files between this laptop and an iPhone on the same Wi-Fi. Ctrl+Alt+D opens QuickDrop.", AutoSize = true, MaximumSize = new Size(380, 0), Margin = new Padding(0, 0, 0, 22) });
+        content.Controls.Add(new Label { Text = "Send files between this laptop and an iPhone on the same Wi-Fi. Ctrl+Alt+Q opens QuickDrop.", AutoSize = true, MaximumSize = new Size(380, 0), Margin = new Padding(0, 0, 0, 22) });
         Button("Send from iPhone", ShowReceiveChoices);
         Button("Send from laptop", ShowSendChoices);
         var startup = new CheckBox { Text = "Start with Windows", AutoSize = true, Checked = StartsWithWindows(), Margin = new Padding(0, 15, 0, 0) };

@@ -6,7 +6,11 @@ A small Windows tray app for moving photos, videos and documents between a lapto
 
 1. [Download QuickDrop-Setup.exe](https://github.com/Renanlvrt/QuickDrop/releases/latest/download/QuickDrop-Setup.exe) and run it. The installer puts QuickDrop in your user account and opens it. It does not need administrator rights.
 2. In QuickDrop, check **Start with Windows** if you want the hotkey always available.
-3. Press **Ctrl+Alt+D** or double-click the tray icon. Choose **Send from iPhone** or **Send from laptop** and scan the QR with the iPhone Camera.
+3. Press **Ctrl+Alt+Q** or double-click the tray icon. Choose **Send from iPhone** or **Send from laptop** and scan the QR with the iPhone Camera.
+
+![QuickDrop's two-choice window](images/home.png)
+
+![Choose files or drag them into QuickDrop](images/send.png)
 
 For phone uploads, choose the default `Documents/QuickDrop/sentFiles` folder, the previous folder or a new folder before the QR appears. For laptop-to-phone transfers, choose files or drag them into QuickDrop. Scanning the QR requests one original file directly, or one ZIP if several were selected. iOS Safari may show its own download confirmation.
 
