@@ -36,11 +36,8 @@ internal sealed class MainForm : Form
         menu.Items.Add("Exit", null, (_, _) => { exitRequested = true; Close(); });
         tray = new NotifyIcon { Icon = SystemIcons.Application, Text = "QuickDrop", ContextMenuStrip = menu, Visible = true };
         tray.DoubleClick += (_, _) => ShowPopup();
-        DragEnter += (_, e) => { if (e.Data?.GetDataPresent(DataFormats.FileDrop) == true) e.Effect = DragDropEffects.Copy; };
-        DragDrop += (_, e) => {
-            var paths = e.Data?.GetData(DataFormats.FileDrop) as string[];
-            if (paths is { Length: > 0 }) _ = SendAsync(paths.Where(File.Exists).ToArray());
-        };
+        AttachDrop(this);
+        AttachDrop(content);
         ShowHome();
     }
 
@@ -131,8 +128,23 @@ internal sealed class MainForm : Form
             using var picker = new OpenFileDialog { Multiselect = true, Title = "Choose files to send" };
             if (picker.ShowDialog(this) == DialogResult.OK) _ = SendAsync(picker.FileNames);
         });
-        content.Controls.Add(new Label { Text = "You can also drag files into this window.", AutoSize = true, Margin = new Padding(0, 10, 0, 0) });
+        var dropArea = new Panel { Width = 385, Height = 120, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle, Margin = new Padding(0, 10, 0, 0) };
+        var hint = new Label { Text = "Or drag files here", TextAlign = ContentAlignment.MiddleCenter, Dock = DockStyle.Fill };
+        AttachDrop(dropArea);
+        AttachDrop(hint);
+        dropArea.Controls.Add(hint);
+        content.Controls.Add(dropArea);
         content.Controls.Add(status);
+    }
+
+    private void AttachDrop(Control control)
+    {
+        control.AllowDrop = true;
+        control.DragEnter += (_, e) => { if (e.Data?.GetDataPresent(DataFormats.FileDrop) == true) e.Effect = DragDropEffects.Copy; };
+        control.DragDrop += (_, e) => {
+            var paths = e.Data?.GetData(DataFormats.FileDrop) as string[];
+            if (paths is { Length: > 0 }) _ = SendAsync(paths.Where(File.Exists).ToArray());
+        };
     }
 
     private async Task ReceiveAsync(string folder)
