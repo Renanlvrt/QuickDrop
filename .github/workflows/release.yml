@@ -1,0 +1,41 @@
+name: Build Windows installer
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Check transfer and security rules
+        run: dotnet run --project native-tests/QuickDrop.Tests.csproj -c Release
+      - name: Publish self-contained executable
+        run: dotnet publish native/QuickDrop.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:DebugType=none -o release
+      - name: Package installer
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' 'installer\QuickDrop.iss'
+          (Get-FileHash -Algorithm SHA256 'release\QuickDrop-Setup.exe').Hash.ToLowerInvariant() + '  QuickDrop-Setup.exe' | Set-Content 'release\QuickDrop-Setup.exe.sha256'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: QuickDrop-Setup
+          path: |
+            release/QuickDrop-Setup.exe
+            release/QuickDrop-Setup.exe.sha256
+      - name: Publish tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create '${{ github.ref_name }}' 'release/QuickDrop-Setup.exe' 'release/QuickDrop-Setup.exe.sha256' --title 'QuickDrop ${{ github.ref_name }}' --generate-notes
